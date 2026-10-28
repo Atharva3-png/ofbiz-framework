@@ -53,11 +53,11 @@ public final class XslTransform {
         tfactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
         tfactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         if (tfactory.getFeature(SAXSource.FEATURE)) {
-            // setup for xml data file preprocessing to be able to xinclude
+            // XInclude is disabled on purpose: xi:include in the data file must not read local or remote files (OFBIZ-13712)
             SAXParserFactory pfactory = SAXParserFactory.newInstance();
             pfactory.setNamespaceAware(true);
             pfactory.setValidating(false);
-            pfactory.setXIncludeAware(true);
+            pfactory.setXIncludeAware(false);
             XMLReader reader = null;
             try {
                 pfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
