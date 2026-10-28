@@ -486,6 +486,28 @@ public class DataResourceWorker implements org.apache.ofbiz.widget.content.DataR
     }
 
     /**
+     * Returns the docbook stylesheet path from the value of the VT_DOCBOOKSTYLESHEET theme property.
+     * The property is a list when set with VT_DOCBOOKSTYLESHEET['add'], a string when set directly,
+     * and an empty string when it is not set.
+     * @param themeProperty the value of the VT_DOCBOOKSTYLESHEET theme property
+     * @return the first non-empty path, or null when no path is set
+     */
+    static String getDocbookStylesheetPath(Object themeProperty) {
+        if (themeProperty instanceof List<?>) {
+            for (Object item : (List<?>) themeProperty) {
+                if (item != null && UtilValidate.isNotEmpty(item.toString())) {
+                    return item.toString();
+                }
+            }
+            return null;
+        }
+        if (themeProperty instanceof String && UtilValidate.isNotEmpty((String) themeProperty)) {
+            return (String) themeProperty;
+        }
+        return null;
+    }
+
+    /**
      * Checks that the given file is within the provided context root directory.
      * Uses a dual-check strategy to support EFS/Docker mount points:
      * 1. Canonical paths (resolves symlinks on both sides) — works for non-mounted paths.
@@ -947,10 +969,15 @@ public class DataResourceWorker implements org.apache.ofbiz.widget.content.DataR
                 String defaultVisualThemeId = EntityUtilProperties.getPropertyValue("general", "VISUAL_THEME", delegator);
                 visualTheme = ThemeFactory.getVisualThemeFromId(defaultVisualThemeId);
                 modelTheme = visualTheme.getModelTheme();
-                String docbookStylesheet = modelTheme.getProperty("VT_DOCBOOKSTYLESHEET").toString();
-                File sourceFileLocation = new File(System.getProperty("ofbiz.home") + "/themes" + docbookStylesheet.substring(1,
-                        docbookStylesheet.length() - 1));
-                UtilMisc.copyFile(sourceFileLocation, targetFileLocation);
+                String docbookStylesheet = getDocbookStylesheetPath(modelTheme.getProperty("VT_DOCBOOKSTYLESHEET"));
+                File sourceFileLocation = docbookStylesheet != null
+                        ? new File(System.getProperty("ofbiz.home") + "/themes" + docbookStylesheet) : null;
+                if (sourceFileLocation != null && sourceFileLocation.exists()) {
+                    UtilMisc.copyFile(sourceFileLocation, targetFileLocation);
+                } else {
+                    Debug.logWarning("No docbook stylesheet found for visual theme [" + defaultVisualThemeId + "] (VT_DOCBOOKSTYLESHEET: "
+                            + docbookStylesheet + "), skipping the copy of docbook.css", MODULE);
+                }
                 // get the template data for rendering
                 String templateLocation = DataResourceWorker.getContentFile(dataResource.getString("dataResourceTypeId"),
                         dataResource.getString("objectInfo"), (String) templateContext.get("contextRoot")).toString();
